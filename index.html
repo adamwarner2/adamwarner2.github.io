@@ -7,188 +7,236 @@
   <script src="processing.js"></script>
 <script type="text/processing" data-processing-target="processing-canvas">
 
-String[] names;
-int[] values;
-float[] centerX;
-float[] centerY;
-float[] labels;
-float origX, origY;
-float graphWidth, graphHeight;
-String xName, yName;
-int maxVal = 0;
-float barWidth;
-boolean bar = true;
+String[] dimensions;
+String[] entries;
+float[][] data;
+float[] xCoords;
+float[][] yCoords;
+float[][] invYs;
+boolean[] isInverted;
+float[] maxes;
+float[] mins;
+float rectWidth;
+int coloredWith = 3;
+boolean[] highlighted;
 
 void setup() {
+  size(400, 400);
   //surface.setResizable(true);
+  background(255);
+    rectMode(CENTER);
+
   loadData();
 }
 
 void draw() {
-  background(200, 200, 200);
-  drawAxes();
-  if (bar) {
-    drawBar();
-  } else {
-    drawLine();
-  }
-  checkMouse();
+  background(255);
+  drawBars();
+  
+  //checkHover();
+  
 }
 
 void loadData() {
-  String[] lines = loadStrings("data.csv");
+  String[] lines = loadStrings("data2.csv");
+  
   String[] firstLine = split(lines[0], ",");
-  xName = firstLine[0];
-  yName = firstLine[1];
-  names = new String[lines.length - 1];
-  values = new int[lines.length - 1];
-  centerX = new float[lines.length - 1];
-  centerY = new float[lines.length - 1];
+  dimensions = new String[firstLine.length - 1];
+  for(int i = 0; i < dimensions.length; ++i) {
+    dimensions[i] = firstLine[i+1];
+  }
+  //println(dimensions.length);
+  
+  //String[] restLines = new String[lines.length - 1];
+  entries = new String[lines.length - 1];
+  xCoords = new float[dimensions.length];
+  maxes = new float[dimensions.length];
+  mins = new float[dimensions.length];
+  data = new float[dimensions.length][entries.length];
+  yCoords = new float[dimensions.length][entries.length];
+  invYs = new float[dimensions.length][entries.length];
+  highlighted = new boolean[entries.length];
 
+  isInverted = new boolean[dimensions.length];
 
-  for (int i = 1; i < lines.length; ++i) {
-    String[] row = split(lines[i], ",");
-    names[i-1] = row[0];
-    values[i -1] = (int)parseFloat(row[1]);
-    if (values[i-1] > maxVal) {
-      maxVal = values[i-1];
+  
+  
+  for(int i = 1; i < lines.length; ++i) {
+    String[] line = split(lines[i], ",");
+
+    entries[i-1] = line[0];
+    for(int j = 1; j < line.length; ++j) {
+      data[j-1][i-1] = parseFloat(line[j]);
     }
   }
-
-  barWidth = (float) (width*0.9)/(names.length);
-
-  for (int i=0; i<values.length; i++) {
-    float h = (((float)values[i]/maxVal)*graphHeight);
-    centerX[i] = (i*barWidth + 0.1*width) + 0.5*barWidth;
-    centerY[i] = graphHeight-h;
+  
+ /* for(int i = 0; i < data.length; ++i) {
+    for(int j = 0; j < data[0].length; ++j) {
+      print(data[i][j] + " ");
+    }
+    println();
+  }*/
+  for(int dim = 0; dim < dimensions.length; ++dim) {
+    mins[dim] = min(data[dim]);
+    maxes[dim] = max(data[dim]);
   }
   
-  float increment = maxVal/10.0;
-  labels = new float[10];
-  for(int i = 0; i < labels.length; ++i) {
-    labels[i] = i*increment;
-  }
+  
   
 }
 
-void drawBar() {
-  fill(226, 229, 100);
-  barWidth = (float) (width*0.9)/(names.length);
-
-  for (int i=0; i<values.length; i++) {
-    float h = (((float)values[i]/maxVal)*graphHeight);
-    rect(i*barWidth + 0.1*width, graphHeight-h, barWidth, h);
+void drawBars() {
+  float spacing = (.8*width)/(dimensions.length - 1);
+  rectWidth = 0.01*width;
+  for(int i = 0; i < dimensions.length; ++i) {
+    float x = spacing*i + 0.1*width;
+    xCoords[i] = x;
+    float center = height/2;
+    float h = 0.8*height;
+    rectMode(CENTER);
+    fill(255);
+    rect(x, center, rectWidth, h);
+    //line(x, .1*height, x, .9*height);  
   }
-}
-
-void drawLine() {
-  fill(226, 229, 100);
-  barWidth = (float) (width*0.9)/(names.length);
-
-  for (int i=0; i<values.length; i++) {
-    float h = (((float)values[i]/maxVal)*graphHeight);
-    ellipse((i*barWidth + 0.1*width) + 0.5*barWidth, graphHeight-h, graphWidth*0.02, graphHeight*0.02);
-    centerX[i] = (i*barWidth + 0.1*width) + 0.5*barWidth;
-    centerY[i] = graphHeight-h;
+  
+  fill(0);
+  for(int i = 0; i < dimensions.length; ++i) {
+    text(dimensions[i], xCoords[i], 0.99*height);
+    if(i == coloredWith) fill(0);
+    else fill(255);
+    rect(xCoords[i], 0.075*height, 0.01*width, 0.03*height);
+    fill(0);
+    if(!isInverted[i]) {
+      text(maxes[i], xCoords[i], 0.95*height);
+      text(mins[i], xCoords[i], 0.05*height);
+    }
+    else {
+      text(mins[i], xCoords[i], 0.95*height);
+      text(maxes[i], xCoords[i], 0.05*height);
+    }
   }
-
-  for (int i=0; i<values.length - 1; i++) {
-    line(centerX[i], centerY[i], centerX[i + 1], centerY[i + 1]);
+  
+  
+  for(int i = 0; i < dimensions.length; ++i) {
+    for(int j = 0; j < entries.length; ++j ) {
+      yCoords[i][j] = (0.1*height) + ((0.8*height)/(maxes[i] - mins[i]))*(data[i][j] - mins[i]);
+      invYs[i][j] = height - yCoords[i][j];
+    }
   }
-}
-
-
-void drawAxes() {
-  origX = width*0.1;
-  origY = height*0.9;
-  graphWidth = width*0.9;
-  graphHeight = height*0.9;
-  barWidth = (float) (width*0.9)/(names.length);
-
-
-  line(origX, origY, width, origY);
-  line(origX, origY, origX, 0);
-
-  fill(0, 102, 153);
-  textSize(width*0.02);
-  text(xName, graphWidth*0.5, height*0.98); 
-
-  int x = (int)(graphWidth*0.02);
-  int y = (int)(graphHeight * 0.5); 
-  pushMatrix();
-  translate(x, y);
-  rotate(HALF_PI + PI);
-  text(yName, 0, 0);
-  popMatrix();
-
-  fill(255, 255, 255);
-  rect(width*0.9, 0, 0.1*width, height*0.05);
-
-  fill(0, 0, 0);
-  if (bar) {
-    text("Line", width*0.92, height*0.04);
-  } 
-  else {
-    text("Bar", width*0.92, height*0.04);
-  }
-
-  for (int i = 0; i < values.length; ++i) {
-    float h = (((float)values[i]/maxVal)*graphHeight);
-
-    centerX[i] = (i*barWidth + 0.1*width) + 0.5*barWidth;
-    centerY[i] = graphHeight-h;
-    line(centerX[i], origY, centerX[i], 0.92*height);
-
-    int x1 = (int)(centerX[i]);
-    int y1 = (int)(height * 0.98); 
-    pushMatrix();
-    translate(x1, y1);
-    rotate(HALF_PI + PI);
-    text(names[i], 0, 0);
-    popMatrix();
-  }
-
-  float increment = (graphHeight)/10;
-  for (int i = 0; i < 10; ++i) {
-    line(0.08*width, origY - (i*increment), origX, origY - (i*increment));
-    text(labels[i], 0.02*width, origY - (i*increment));
-  }  
-}
-
-void checkMouse() {
-  if (bar) {
-    if ((mouseX > origX) && (mouseY < origY)) {
-      int index = ((int)(mouseX/barWidth)) - 1;
-      float barHeight = graphHeight - ((float)values[index]/maxVal)*graphHeight;
-      if ((mouseY > barHeight) && (mouseY < origY) ) {
-        fill(255, 255, 255);
-        rect(mouseX, mouseY, graphWidth*0.1, graphHeight*0.1);
-        String label = "(" + names[index] + "," + values[index] + ")";
-        fill(0, 0, 0);
-        textSize(width*0.0125);
-        text(label, mouseX + graphWidth*0.02, mouseY + graphHeight*0.05);
+  
+  /*for(int i = 0; i < yCoords.length; ++i) {
+    println(i);
+    for(int j = 0; j < yCoords[0].length; ++j) {
+      print(yCoords[i][j] + " ");
+    }
+    println();
+  }*/
+  
+  
+  for(int ent = 0; ent < entries.length; ++ent) {
+    /*if(highlighted[ent]) {
+      strokeWeight(4);
+    }
+    else {
+      strokeWeight(1);
+    }*/
+    float red = ((yCoords[coloredWith][ent])/height)*255;
+    float blue = 255 - red;
+    stroke(red, 0, blue);
+    for(int dimen = 0; dimen < dimensions.length - 1; ++dimen) {
+      if(!isInverted[dimen] && !isInverted[dimen + 1]){
+        line(xCoords[dimen], yCoords[dimen][ent], xCoords[dimen + 1], yCoords[dimen +1][ent]);
+      }  
+      else if (isInverted[dimen] && !isInverted[dimen + 1]){
+        line(xCoords[dimen], invYs[dimen][ent], xCoords[dimen + 1], yCoords[dimen +1][ent]);
       }
-    }
-  } 
-  else {
-    if ((mouseX > origX) && (mouseY < origY)) {
-      int index = ((int)(mouseX/barWidth)) - 1;
-      if ((mouseX > (centerX[index] - graphWidth * 0.01)) && (mouseX < (centerX[index] + graphWidth * 0.01)) && (mouseY > (centerY[index] - graphHeight * 0.01)) && (mouseY < (centerY[index] + graphHeight * 0.01))) {        
-        fill(255, 255, 255);
-        rect(mouseX, mouseY, graphWidth*0.1, graphHeight*0.1);
-        String label = "(" + names[index] + "," + values[index] + ")";
-        fill(0, 0, 0);
-        textSize(width*0.0125);
-        text(label, mouseX + graphWidth*0.02, mouseY + graphHeight*0.05);
+      else if (isInverted[dimen] && isInverted[dimen + 1]){
+        line(xCoords[dimen], invYs[dimen][ent], xCoords[dimen + 1], invYs[dimen +1][ent]);
+      }
+      else {
+        line(xCoords[dimen], yCoords[dimen][ent], xCoords[dimen + 1], invYs[dimen +1][ent]);
       }
     }
   }
+
+  
 }
 
-void mouseClicked() {
-  if ((mouseX > width*0.9) && (mouseY < height*0.05)) {
-    bar = !bar;
+void mousePressed() {
+  
+  for(int i = 0; i < xCoords.length; ++i) {
+    if( mouseY > 0.1*height && mouseY < 0.9*height && mouseX > (xCoords[i] - 0.5*rectWidth) && mouseX < (xCoords[i] + 0.5*rectWidth)) {
+      
+      isInverted[i] = !isInverted[i];
+    }
+    //rect(xCoords[i], 0.075*height, 0.01*width, 0.01*height);
+    if( (mouseX > (xCoords[i] - 0.01*width)) && (mouseX < (xCoords[i] + 0.01*width)) && (mouseY > (0.075*height - 0.03*height)) && (mouseY < (0.075*height + 0.03*height))){
+      coloredWith = i;
+    }
   }
+  
+}
+
+void checkHover() {
+  for(int i = 0; i < highlighted.length; ++i) {
+    highlighted[i] = false;
+  }
+  for(int i = 0; i < entries.length; ++i) {
+    for(int j = 0; j < dimensions.length - 1; ++j) {
+      PVector first = new PVector(xCoords[j], data[j][i]);
+      PVector second = new PVector(xCoords[j+1], data[j+1][i]);
+      PVector mouse = new PVector(mouseX, mouseY);
+      if(pointInsideLine(mouse, first, second, 4)) {
+        println("aaa");
+        highlighted[i] = true;
+        break;
+      }
+      else {
+       // println("x");
+      }
+      
+    }
+  }
+}
+
+boolean pointInsideLine(PVector thePoint,
+                        PVector theLineEndPoint1, 
+                        PVector theLineEndPoint2, 
+                        int theTolerance) {
+                          
+  PVector dir = new PVector(theLineEndPoint2.x,
+                            theLineEndPoint2.y,
+                            theLineEndPoint2.z);
+  dir.sub(theLineEndPoint1);
+  PVector diff = new PVector(thePoint.x, thePoint.y, 0);
+  diff.sub(theLineEndPoint1);
+
+  // inside distance determines the weighting 
+  // between linePoint1 and linePoint2 
+  float insideDistance = diff.dot(dir) / dir.dot(dir);
+
+  if(insideDistance>0 && insideDistance<1) {
+    // thePoint is inside/close to 
+    // the line if insideDistance>0 or <1
+    /*println( ((insideDistance<0.5) ? 
+            "closer to p1":"closer to p2" ) + 
+            "\t p1:"+nf((1-insideDistance),1,2)+
+            " / p2:"+nf(insideDistance,1,2) );*/
+            
+    PVector closest = new PVector(theLineEndPoint1.x,
+                                  theLineEndPoint1.y,
+                                  theLineEndPoint1.z);
+    dir.mult(insideDistance);
+    closest.add(dir);
+    PVector d = new PVector(thePoint.x, thePoint.y, 0);
+    d.sub(closest);
+     // println((insideDistance>0.5) ? "b":"a");
+    float distsqr = d.dot(d);
+    
+    // check the distance of thePoint to the line against our tolerance. 
+    return (distsqr < pow(theTolerance,2)); 
+  }
+  return false;
 }
 
 </script>
