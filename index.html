@@ -21,7 +21,7 @@ int coloredWith = 3;
 boolean[] highlighted;
 
 void setup() {
-  size(400, 400);
+  size(500, 800);
   //surface.setResizable(true);
   background(255);
     rectMode(CENTER);
@@ -33,7 +33,6 @@ void draw() {
   background(255);
   drawBars();
   
-  //checkHover();
   
 }
 
@@ -177,67 +176,9 @@ void mousePressed() {
   
 }
 
-void checkHover() {
-  for(int i = 0; i < highlighted.length; ++i) {
-    highlighted[i] = false;
-  }
-  for(int i = 0; i < entries.length; ++i) {
-    for(int j = 0; j < dimensions.length - 1; ++j) {
-      PVector first = new PVector(xCoords[j], data[j][i]);
-      PVector second = new PVector(xCoords[j+1], data[j+1][i]);
-      PVector mouse = new PVector(mouseX, mouseY);
-      if(pointInsideLine(mouse, first, second, 4)) {
-        println("aaa");
-        highlighted[i] = true;
-        break;
-      }
-      else {
-       // println("x");
-      }
-      
-    }
-  }
-}
 
-boolean pointInsideLine(PVector thePoint,
-                        PVector theLineEndPoint1, 
-                        PVector theLineEndPoint2, 
-                        int theTolerance) {
-                          
-  PVector dir = new PVector(theLineEndPoint2.x,
-                            theLineEndPoint2.y,
-                            theLineEndPoint2.z);
-  dir.sub(theLineEndPoint1);
-  PVector diff = new PVector(thePoint.x, thePoint.y, 0);
-  diff.sub(theLineEndPoint1);
 
-  // inside distance determines the weighting 
-  // between linePoint1 and linePoint2 
-  float insideDistance = diff.dot(dir) / dir.dot(dir);
 
-  if(insideDistance>0 && insideDistance<1) {
-    // thePoint is inside/close to 
-    // the line if insideDistance>0 or <1
-    /*println( ((insideDistance<0.5) ? 
-            "closer to p1":"closer to p2" ) + 
-            "\t p1:"+nf((1-insideDistance),1,2)+
-            " / p2:"+nf(insideDistance,1,2) );*/
-            
-    PVector closest = new PVector(theLineEndPoint1.x,
-                                  theLineEndPoint1.y,
-                                  theLineEndPoint1.z);
-    dir.mult(insideDistance);
-    closest.add(dir);
-    PVector d = new PVector(thePoint.x, thePoint.y, 0);
-    d.sub(closest);
-     // println((insideDistance>0.5) ? "b":"a");
-    float distsqr = d.dot(d);
-    
-    // check the distance of thePoint to the line against our tolerance. 
-    return (distsqr < pow(theTolerance,2)); 
-  }
-  return false;
-}
 
 </script>
 <canvas id="processing-canvas"> </canvas>
