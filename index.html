@@ -1,10 +1,227 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title></title>
+    <title>My stuff</title>
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <style> 
+            div.tooltip { 
+                position: absolute;     
+                /*text-align: center; */    
+                width: 220px;         
+                height: 120px;          
+                /*padding: 2px;   */    
+                font: 12px sans-serif;    
+                background: #fff; 
+                border: 0px;    
+                border-radius: 4px;     
+                pointer-events: none;     
+            }
+
+        </style>
   </head>
   <body>
-  <script src="processing.js"></script>
+          <h1>US Presidential Elections from 1940 to 2016</h1>
+        <div id="legend"></div>
+        <div id="grid"></div>
+        <script type="text/javascript">
+        var dict = {
+          AL: {x: 7, y: 6},
+          AK: {x: 0, y: 0},
+          AZ: {x: 2, y: 5},
+          AR: {x: 5, y: 5},
+          CA: {x: 1, y: 4},
+          CO: {x: 3, y: 4},
+          CT: {x: 10, y: 3},
+          DE: {x: 9, y: 5},
+          DC: {x: 10, y: 4},
+          FL: {x: 9, y: 7},
+          GA: {x: 8, y: 6},
+          HI: {x: 1, y: 7},
+          ID: {x: 2, y: 2},
+          IL: {x: 6, y: 2},
+          IN: {x: 6, y: 3},
+          IA: {x: 5, y: 3},
+          KS: {x: 4, y: 5},
+          KY: {x: 6, y: 4},
+          LA: {x: 5, y: 6},
+          ME: {x: 11, y: 0},
+          MD: {x: 9, y: 4},
+          MA: {x: 11, y: 2},
+          MI: {x: 8, y: 2},
+          MN: {x: 5, y: 2},
+          MS: {x: 6, y: 6},
+          MO: {x: 5, y: 4},
+          MT: {x: 3, y: 2},
+          NE: {x: 4, y: 4},
+          NV: {x: 2, y: 3},
+          NH: {x: 11, y: 1},
+          NJ: {x: 9, y: 3},
+          NM: {x: 3, y: 5},
+          NY: {x: 9, y: 2},
+          NC: {x: 7, y: 5},
+          ND: {x: 4, y: 2},
+          OH: {x: 7, y: 3},
+          OK: {x: 4, y: 6},
+          OR: {x: 1, y: 3},
+          PA: {x: 8, y: 3},
+          RI: {x: 10, y: 2},
+          SC: {x: 8, y: 5},
+          SD: {x: 4, y: 3},
+          TN: {x: 6, y: 5},
+          TX: {x: 4, y: 7},
+          UT: {x: 2, y: 4},
+          VT: {x: 10, y: 1},
+          VA: {x: 8, y: 4},
+          WA: {x: 1, y: 2},
+          WV: {x: 7, y: 4},
+          WI: {x: 7, y: 2},
+          WY: {x: 3, y: 3},
+   
+
+        }
+
+        var colors = [
+            "#003D7A", "#02509E", "#2E82BF", "#68ADD8", "#9CC9E2", "#C5DBF0",
+"#FEBB9E", "#FE926E", "#FE6943", "#E12B1B", "#A70A0A", "#890202"];
+        
+        var timeline = d3.select("#legend")
+            .append("svg")
+            .attr("width", "1000px")
+            .attr("height", "50px");
+
+        for (var i = 0; i < colors.length; i++) {
+            timeline.append("rect")
+            .attr("x", (i * (1000/12)) + "px")
+            .attr("y", 0)
+            .attr("width", (1000/12) + "px")
+            .attr("height", "20px")
+            .style("fill", colors[i]);
+        }
+        var val = -60;
+        for (var i = 0; i < colors.length; i++) {
+            timeline.append("text")
+            .attr("x", (i * (1000/12)) + "px")
+            .attr("y", "40px")
+            .text(val + " to " + (val + 10));
+            val+=10;
+        }
+
+        
+
+        var rectWidth = 60;
+        var rectHeight = 60;
+        d3.csv("data/election-results-2008.csv", function(error1, data1) {
+            //d3.csv("states.csv", function(error2, data2) {
+                //console.log(data1);
+                //console.log(data2);
+
+                var grid = d3.select("#grid")
+                .append("svg")
+                .attr("width","1000px")
+                .attr("height","710px");
+
+                var state = grid.selectAll(".state")
+                .data(data1)
+                .enter().append("g")
+                .attr("class", "state");
+
+                var tooltip = d3.select("body").append("div") 
+                .attr("class", "tooltip")       
+                .style("opacity", 0);
+                
+
+                var squares = state.selectAll(".square")
+                .data(data1)
+                .enter().append("rect")
+                .attr("class", "square")
+                .attr("x", function(d) { 
+                  return (dict[d.Abbreviation].x * rectWidth);})
+                .attr("y", function(d) { 
+                  return (dict[d.Abbreviation].y * rectHeight);})
+                .attr("width",rectWidth)
+                .attr("height",rectHeight)
+                .style("fill", function(d){
+                    var diff = d.R_Percentage - d.D_Percentage;
+                    var range = -60;
+                    for(var i = 0; i < colors.length; ++i) {
+                        if(diff < (range + 10)) {
+                            return colors[i];
+                        }
+                        
+                        range += 10;
+                    }
+                })
+            
+                .style("stroke", "#222")
+                .on("mouseover", function(d) {      
+                        tooltip.html("")  
+                        .style("left", (d3.event.pageX) + "px")   
+                        .style("top", (d3.event.pageY - 28) + "px")
+                        .style("opacity", .9);
+                        
+                        tooltip.append("h5")
+                        .html(d.State)
+                        .style("text-align", "left")
+                        .style("text-anchor", "start");
+
+                        tooltip.append("p")
+                        .html("Electoral Votes: " + d.Total_EV);
+
+                        var list = tooltip.append("ul")
+                        .append("li").html(d.D_Nominee + ": " + d.D_Votes + " (" + d.D_Percentage + "%)")
+                        .style("text-align", "left")
+                        .append("li").html(d.R_Nominee + ": " + d.R_Votes + " (" + d.R_Percentage + "%)");
+                        /*.style("left", (d3.event.pageX) + "px")   
+                        .style("top", (d3.event.pageY - 28) + "px")
+                        .style("opacity", .9);*/
+                 })         
+                 .on("mouseout", function(d) {      
+                        tooltip.style("opacity", 0);  
+                 });
+             
+
+
+                state.selectAll(".label")
+                .data(data1)
+                .enter().append("text")
+                .attr("x", function(d) { 
+                  return ((dict[d.Abbreviation].x * rectWidth) +rectWidth/2)})
+                .attr("y", function(d) { 
+                  return ((dict[d.Abbreviation].y * rectHeight) + (rectHeight/4) )})
+                .attr("text-anchor","middle")
+                .attr("dy",".2em")
+                .text(function(d) {   
+                  return d.Abbreviation;});
+
+                state.selectAll(".label")
+                .data(data1)
+                .enter().append("text")
+                .attr("x", function(d) { 
+                  return ((dict[d.Abbreviation].x * rectWidth) +rectWidth/2)})
+                .attr("y", function(d) { 
+                  return ((dict[d.Abbreviation].y * rectHeight) + (rectHeight*0.8) )})
+                .attr("text-anchor","middle")
+                .attr("dy",".2em")
+                .text(function(d) { 
+                  return d.Total_EV; });
+
+
+
+
+            //});
+        });
+
+       /* function formatName(name) {
+            name = name.replace(" ", "");
+            name = name.replace(",", "");
+            name = name.replace(".", "");
+            name = name.replace(".", "");
+            return name;
+        }*/
+
+        </script>
+<script src="processing.js"></script>
+
 <script type="text/processing" data-processing-target="processing-canvas">
 
 String[] dimensions;
@@ -177,13 +394,202 @@ void mousePressed() {
   }
   
 }
+</script>
 
 
+<script type="text/processing" data-processing-target="c">
+String[] names;
+int[] values;
+float[] centerX;
+float[] centerY;
+float[] labels;
+float origX, origY;
+float graphWidth, graphHeight;
+String xName, yName;
+int maxVal = 0;
+float barWidth;
+boolean bar = true;
+
+void setup() {
+  //surface.setResizable(true);
+  size(600, 500);
+  loadData();
+}
+
+void draw() {
+  background(200, 200, 200);
+  drawAxes();
+  if (bar) {
+    drawBar();
+  } else {
+    drawLine();
+  }
+  checkMouse();
+}
+
+void loadData() {
+  String[] lines = loadStrings("data.csv");
+  String[] firstLine = split(lines[0], ",");
+  xName = firstLine[0];
+  yName = firstLine[1];
+  names = new String[lines.length - 1];
+  values = new int[lines.length - 1];
+  centerX = new float[lines.length - 1];
+  centerY = new float[lines.length - 1];
 
 
+  for (int i = 1; i < lines.length; ++i) {
+    String[] row = split(lines[i], ",");
+    names[i-1] = row[0];
+    values[i -1] = (int)parseFloat(row[1]);
+    if (values[i-1] > maxVal) {
+      maxVal = values[i-1];
+    }
+  }
+
+  barWidth = (float) (width*0.9)/(names.length);
+
+  for (int i=0; i<values.length; i++) {
+    float h = (((float)values[i]/maxVal)*graphHeight);
+    centerX[i] = (i*barWidth + 0.1*width) + 0.5*barWidth;
+    centerY[i] = graphHeight-h;
+  }
+  
+  float increment = maxVal/10.0;
+  labels = new float[10];
+  for(int i = 0; i < labels.length; ++i) {
+    labels[i] = i*increment;
+  }
+  
+}
+
+void drawBar() {
+  fill(226, 229, 100);
+  barWidth = (float) (width*0.9)/(names.length);
+
+  for (int i=0; i<values.length; i++) {
+    float h = (((float)values[i]/maxVal)*graphHeight);
+    rect(i*barWidth + 0.1*width, graphHeight-h, barWidth, h);
+  }
+}
+
+void drawLine() {
+  fill(226, 229, 100);
+  barWidth = (float) (width*0.9)/(names.length);
+
+  for (int i=0; i<values.length; i++) {
+    float h = (((float)values[i]/maxVal)*graphHeight);
+    ellipse((i*barWidth + 0.1*width) + 0.5*barWidth, graphHeight-h, graphWidth*0.02, graphHeight*0.02);
+    centerX[i] = (i*barWidth + 0.1*width) + 0.5*barWidth;
+    centerY[i] = graphHeight-h;
+  }
+
+  for (int i=0; i<values.length - 1; i++) {
+    line(centerX[i], centerY[i], centerX[i + 1], centerY[i + 1]);
+  }
+}
+
+
+void drawAxes() {
+  origX = width*0.1;
+  origY = height*0.9;
+  graphWidth = width*0.9;
+  graphHeight = height*0.9;
+  barWidth = (float) (width*0.9)/(names.length);
+
+
+  line(origX, origY, width, origY);
+  line(origX, origY, origX, 0);
+
+  fill(0, 102, 153);
+  textSize(width*0.02);
+  text(xName, graphWidth*0.5, height*0.98); 
+
+  int x = (int)(graphWidth*0.02);
+  int y = (int)(graphHeight * 0.5); 
+  pushMatrix();
+  translate(x, y);
+  rotate(HALF_PI + PI);
+  text(yName, 0, 0);
+  popMatrix();
+
+  fill(255, 255, 255);
+  rect(width*0.9, 0, 0.1*width, height*0.05);
+
+  fill(0, 0, 0);
+  if (bar) {
+    text("Line", width*0.92, height*0.04);
+  } 
+  else {
+    text("Bar", width*0.92, height*0.04);
+  }
+
+  for (int i = 0; i < values.length; ++i) {
+    float h = (((float)values[i]/maxVal)*graphHeight);
+
+    centerX[i] = (i*barWidth + 0.1*width) + 0.5*barWidth;
+    centerY[i] = graphHeight-h;
+    line(centerX[i], origY, centerX[i], 0.92*height);
+
+    int x1 = (int)(centerX[i]);
+    int y1 = (int)(height * 0.98); 
+    pushMatrix();
+    translate(x1, y1);
+    rotate(HALF_PI + PI);
+    text(names[i], 0, 0);
+    popMatrix();
+  }
+
+  float increment = (graphHeight)/10;
+  for (int i = 0; i < 10; ++i) {
+    line(0.08*width, origY - (i*increment), origX, origY - (i*increment));
+    text(labels[i], 0.02*width, origY - (i*increment));
+  }  
+}
+
+void checkMouse() {
+  if (bar) {
+    if ((mouseX > origX) && (mouseY < origY)) {
+      int index = ((int)(mouseX/barWidth)) - 1;
+      float barHeight = graphHeight - ((float)values[index]/maxVal)*graphHeight;
+      if ((mouseY > barHeight) && (mouseY < origY) ) {
+        fill(255, 255, 255);
+        rect(mouseX, mouseY, graphWidth*0.1, graphHeight*0.1);
+        String label = "(" + names[index] + "," + values[index] + ")";
+        fill(0, 0, 0);
+        textSize(width*0.0125);
+        text(label, mouseX + graphWidth*0.02, mouseY + graphHeight*0.05);
+      }
+    }
+  } 
+  else {
+    if ((mouseX > origX) && (mouseY < origY)) {
+      int index = ((int)(mouseX/barWidth)) - 1;
+      if ((mouseX > (centerX[index] - graphWidth * 0.01)) && (mouseX < (centerX[index] + graphWidth * 0.01)) && (mouseY > (centerY[index] - graphHeight * 0.01)) && (mouseY < (centerY[index] + graphHeight * 0.01))) {        
+        fill(255, 255, 255);
+        rect(mouseX, mouseY, graphWidth*0.1, graphHeight*0.1);
+        String label = "(" + names[index] + "," + values[index] + ")";
+        fill(0, 0, 0);
+        textSize(width*0.0125);
+        text(label, mouseX + graphWidth*0.02, mouseY + graphHeight*0.05);
+      }
+    }
+  }
+}
+
+void mouseClicked() {
+  if ((mouseX > width*0.9) && (mouseY < height*0.05)) {
+    bar = !bar;
+  }
+}
 
 </script>
 <canvas id="processing-canvas"> </canvas>
+<br>
+<canvas id="c"></canvas>
+<br>
+
+
   
   </body>
 </html>
