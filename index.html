@@ -160,7 +160,7 @@
         var val = -60;
         for (var i = 0; i < colors.length; i++) {
             scale.append("text")
-            .attr("x", (i * (1000/12)) + "px")
+            .attr("x", ((i * (1000/12)) + 10) + "px")
             .attr("y", "40px")
             .text(val + " to " + (val + 10));
             val+=10;
