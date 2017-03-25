@@ -1,664 +1,132 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>My stuff</title>
-    <script src="https://d3js.org/d3.v4.js"></script>
-    <style> 
-            div.tooltip { 
-                position: absolute;     
-                /*text-align: center; */    
-                width: 220px;         
-                height: 120px;          
-                /*padding: 2px;   */    
-                font: 12px sans-serif;    
-                background: #fff; 
-                border: 0px;    
-                border-radius: 4px;     
-                pointer-events: none;     
-            }
+<meta charset="utf-8">
+<body>
+<script src="http://d3js.org/d3.v3.js"></script>
 
-        </style>
-  </head>
-  <body>
-            <h1>US Presidential Elections from 1940 to 2016</h1>
-        <div id="timeline"></div>
-        <div id="legend"></div>
-        <h3></h3>
-        <div id="pic"></div>
-        <div id="grid"></div>
-        <script type="text/javascript">
-        var dict = {
-            AL: {x: 7, y: 6},
-            AK: {x: 0, y: 0},
-            AZ: {x: 2, y: 5},
-            AR: {x: 5, y: 5},
-            CA: {x: 1, y: 4},
-            CO: {x: 3, y: 4},
-            CT: {x: 10, y: 3},
-            DE: {x: 9, y: 5},
-            DC: {x: 10, y: 4},
-            FL: {x: 9, y: 7},
-            GA: {x: 8, y: 6},
-            HI: {x: 1, y: 7},
-            ID: {x: 2, y: 2},
-            IL: {x: 6, y: 2},
-            IN: {x: 6, y: 3},
-            IA: {x: 5, y: 3},
-            KS: {x: 4, y: 5},
-            KY: {x: 6, y: 4},
-            LA: {x: 5, y: 6},
-            ME: {x: 11, y: 0},
-            MD: {x: 9, y: 4},
-            MA: {x: 11, y: 2},
-            MI: {x: 8, y: 2},
-            MN: {x: 5, y: 2},
-            MS: {x: 6, y: 6},
-            MO: {x: 5, y: 4},
-            MT: {x: 3, y: 2},
-            NE: {x: 4, y: 4},
-            NV: {x: 2, y: 3},
-            NH: {x: 11, y: 1},
-            NJ: {x: 9, y: 3},
-            NM: {x: 3, y: 5},
-            NY: {x: 9, y: 2},
-            NC: {x: 7, y: 5},
-            ND: {x: 4, y: 2},
-            OH: {x: 7, y: 3},
-            OK: {x: 4, y: 6},
-            OR: {x: 1, y: 3},
-            PA: {x: 8, y: 3},
-            RI: {x: 10, y: 2},
-            SC: {x: 8, y: 5},
-            SD: {x: 4, y: 3},
-            TN: {x: 6, y: 5},
-            TX: {x: 4, y: 7},
-            UT: {x: 2, y: 4},
-            VT: {x: 10, y: 1},
-            VA: {x: 8, y: 4},
-            WA: {x: 1, y: 2},
-            WV: {x: 7, y: 4},
-            WI: {x: 7, y: 2},
-            WY: {x: 3, y: 3},
-   
+<div class="chart"></div>
 
-        }
+<script>
 
-        var years = [1940, 1944, 1948, 1952, 1956, 1960, 1964, 1968, 1972, 1976, 1980,
-        1984, 1988, 1992, 1996, 2000, 2004, 2008, 2012, 2016];
-        
-        var winners = [1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0];
+var years = [];
+var colors = ["#FF3300", "#FF6600", "FFFF00", "#00FF00", "#0000FF", "#000066"];
 
-        var colors = [
-            "#003D7A", "#02509E", "#2E82BF", "#68ADD8", "#9CC9E2", "#C5DBF0",
-"#FEBB9E", "#FE926E", "#FE6943", "#E12B1B", "#A70A0A", "#890202"];
+var margin = {top: 20, right: 40, bottom: 30, left: 30},
+ width = 900 - margin.left - margin.right,
+ height = 500 - margin.top - margin.bottom;
 
-        var pics = [
-            "FDR_in_1933.jpg", "FDR_in_1933.jpg", "truman.jpeg", "eisen.jpg", "eisen.jpg", "jfk.jpg", 
-            "lbj.jpg", "nixon.jpg",  "nixon.jpg", "carter.jpg", "reagan.jpg", "reagan.jpg", 
-            "hw.jpg", "clinton.jpeg", "clinton.jpeg", "dubyah.jpeg", "dubyah.jpeg", 
-            "obama.jpg", "obama.jpg", "orange.jpg"];
+var tooltip = d3.select("body")
+    .append("div")
+    .attr("class", "remove")
+    .style("position", "absolute")
+    .style("visibility", "hidden")
+    .style("background-color", "#FFFFFF")
+    .style("top", "30px")
+    .style("left", "50px");
 
-    d3.csv("data/yearwise-winner.csv", function(data1) {
-        var timeline = d3.select("#timeline")
-            .append("svg")
-            .attr("width", "1010px")
-            .attr("height", "50px")
-            .attr("pading-left", "10px");
-
-        var xScale = d3.scaleLinear()
-                        .range([15, 990])
-                        .domain([1940, 2016]);
-
-        timeline.selectAll("circle")
-            .data(data1)
-            .enter()
-            .append("circle")
-            .attr("cx", function(d) {return xScale(d.YEAR);})
-            .attr("cy", "10px")
-            .attr("r", "10px")
-            .attr("fill", function(d) {
-                if(d.PARTY == "D") {
-                    return "#0000FF";
-                }
-                else {
-                    return "#FF0000";
-                }
-            })
-            .on('click', function(d) {
-               // alert(d);
-                var file = "data/election-results-" + d.YEAR + ".csv"
-                getData(file, d.YEAR);
-                //alert(d);
-            })
-
-        timeline.selectAll("dates")
-            .data(data1)
-            .enter()
-            .append("text")
-            .attr("x", function(d) {return xScale(d.YEAR);})
-            .attr("y", "40px")
-            .text(function(d) {
-                return d.YEAR;
-            })
-            .attr("text-anchor", "middle");
-        });
-        
-        var scale = d3.select("#legend")
-            .append("svg")
-            .attr("width", "1000px")
-            .attr("height", "50px");
-
-        for (var i = 0; i < colors.length; i++) {
-            scale.append("rect")
-            .attr("x", (i * (1000/12)) + "px")
-            .attr("y", 0)
-            .attr("width", (1000/12) + "px")
-            .attr("height", "20px")
-            .style("fill", colors[i]);
-        }
-
-        var val = -60;
-        for (var i = 0; i < colors.length; i++) {
-            scale.append("text")
-            .attr("x", ((i * (1000/12)) + 10) + "px")
-            .attr("y", "40px")
-            .text(val + " to " + (val + 10));
-            val+=10;
-        }
-
-        
-
-        var rectWidth = 60;
-        var rectHeight = 60;
-
-function getData(file, year1) {
-        d3.csv(file, function(data1) {
-                d3.select("#pic").html("");
-                d3.select("#grid").html("");
-                d3.select("h3").html("");
-
-                d3.select("h3")
-                .html(year1);
-
-                var image = d3.select("#pic")
-                .append("svg")
-                .attr("width", "100px")
-                .attr("height", "200px");
-
-                var index = (year1 - 1940)/(4);
-                var path = "presidents/" + pics[index];
-
-                image.append("image")
-                .attr("x", "0px")
-                .attr("y", "0px")
-                .attr("width", "100px")
-                .attr("height", "200px")
-                .attr("xlink:href", path);
-
-                var grid = d3.select("#grid")
-                .append("svg")
-                .attr("width","1000px")
-                .attr("height","710px");
-
-                var state = grid.selectAll(".state")
-                .data(data1)
-                .enter().append("g")
-                .attr("class", "state");
-
-                var tooltip = d3.select("body").append("div")   
-                .attr("class", "tooltip")               
-                .style("opacity", 0);
-                
-
-                var squares = state.selectAll(".square")
-                .data(data1)
-                .enter().append("rect")
-                .attr("class", "square")
-                .attr("x", function(d) { 
-                    return (dict[d.Abbreviation].x * rectWidth);})
-                .attr("y", function(d) { 
-                    return (dict[d.Abbreviation].y * rectHeight);})
-                .attr("width",rectWidth)
-                .attr("height",rectHeight)
-                .style("fill", function(d){
-                    var diff = d.R_Percentage - d.D_Percentage;
-                    var range = -60;
-                    for(var i = 0; i < colors.length; ++i) {
-                        if(diff < (range + 10)) {
-                            return colors[i];
-                        }
-                        
-                        range += 10;
-                    }
-                    return colors[colors.length - 1];
-                })
-            
-                .style("stroke", "#222")
-                .on("mouseover", function(d) {          
-                        tooltip.html("")    
-                        .style("left", (d3.event.pageX) + "px")     
-                        .style("top", (d3.event.pageY - 28) + "px")
-                        .style("opacity", .9);
-                        
-                        tooltip.append("h5")
-                        .html(d.State)
-                        .style("text-align", "left")
-                        .style("text-anchor", "start");
-
-                        tooltip.append("p")
-                        .html("Electoral Votes: " + d.Total_EV);
-
-                        var list = tooltip.append("ul")
-                        .append("li").html(d.D_Nominee + ": " + d.D_Votes + " (" + d.D_Percentage + "%)")
-                        .style("text-align", "left")
-                        .append("li").html(d.R_Nominee + ": " + d.R_Votes + " (" + d.R_Percentage + "%)");
-
-                 })                 
-                 .on("mouseout", function(d) {          
-                        tooltip.style("opacity", 0);    
-                 });
-             
-
-
-                state.selectAll(".label")
-                .data(data1)
-                .enter().append("text")
-                .attr("x", function(d) { 
-                    return ((dict[d.Abbreviation].x * rectWidth) +rectWidth/2)})
-                .attr("y", function(d) { 
-                    return ((dict[d.Abbreviation].y * rectHeight) + (rectHeight/4) )})
-                .attr("text-anchor","middle")
-                .attr("dy",".2em")
-                .text(function(d) {     
-                    return d.Abbreviation;});
-
-                state.selectAll(".label")
-                .data(data1)
-                .enter().append("text")
-                .attr("x", function(d) { 
-                    return ((dict[d.Abbreviation].x * rectWidth) +rectWidth/2)})
-                .attr("y", function(d) { 
-                    return ((dict[d.Abbreviation].y * rectHeight) + (rectHeight*0.8) )})
-                .attr("text-anchor","middle")
-                .attr("dy",".2em")
-                .text(function(d) { 
-                    return d.Total_EV; });
-
-            
-        });
-}
-
-        </script>
-<script src="processing.js"></script>
-
-<script type="text/processing" data-processing-target="processing-canvas">
-
-String[] dimensions;
-String[] entries;
-float[][] data;
-float[] xCoords;
-float[][] yCoords;
-float[][] invYs;
-boolean[] isInverted;
-float[] maxes;
-float[] mins;
-float rectWidth;
-int coloredWith = 3;
-boolean[] highlighted;
-
-void setup() {
-  size(600, 500);
-
-  //surface.setResizable(true);
-  background(255);
-    rectMode(CENTER);
-textAlign(CENTER);
-
-  loadData();
-}
-
-void draw() {
-  background(255);
-  drawBars();
-  
-  
-}
-
-void loadData() {
-  String[] lines = loadStrings("data2.csv");
-  
-  String[] firstLine = split(lines[0], ",");
-  dimensions = new String[firstLine.length - 1];
-  for(int i = 0; i < dimensions.length; ++i) {
-    dimensions[i] = firstLine[i+1];
-  }
-  //println(dimensions.length);
-  
-  //String[] restLines = new String[lines.length - 1];
-  entries = new String[lines.length - 1];
-  xCoords = new float[dimensions.length];
-  maxes = new float[dimensions.length];
-  mins = new float[dimensions.length];
-  data = new float[dimensions.length][entries.length];
-  yCoords = new float[dimensions.length][entries.length];
-  invYs = new float[dimensions.length][entries.length];
-  highlighted = new boolean[entries.length];
-
-  isInverted = new boolean[dimensions.length];
-
-  
-  
-  for(int i = 1; i < lines.length; ++i) {
-    String[] line = split(lines[i], ",");
-
-    entries[i-1] = line[0];
-    for(int j = 1; j < line.length; ++j) {
-      data[j-1][i-1] = parseFloat(line[j]);
-    }
-  }
-  
- /* for(int i = 0; i < data.length; ++i) {
-    for(int j = 0; j < data[0].length; ++j) {
-      print(data[i][j] + " ");
-    }
-    println();
-  }*/
-  for(int dim = 0; dim < dimensions.length; ++dim) {
-    mins[dim] = min(data[dim]);
-    maxes[dim] = max(data[dim]);
-  }
-  
-  
-  
-}
-
-void drawBars() {
-  float spacing = (.8*width)/(dimensions.length - 1);
-  rectWidth = 0.01*width;
-  for(int i = 0; i < dimensions.length; ++i) {
-    float x = spacing*i + 0.1*width;
-    xCoords[i] = x;
-    float center = height/2;
-    float h = 0.8*height;
-    rectMode(CENTER);
-    fill(255);
-    rect(x, center, rectWidth, h);
-    //line(x, .1*height, x, .9*height);  
-  }
-  
-  fill(0);
-  for(int i = 0; i < dimensions.length; ++i) {
-    text(dimensions[i], xCoords[i], 0.99*height);
-    if(i == coloredWith) fill(0);
-    else fill(255);
-    rect(xCoords[i], 0.075*height, 0.01*width, 0.03*height);
-    fill(0);
-    if(!isInverted[i]) {
-      text(maxes[i], xCoords[i], 0.95*height);
-      text(mins[i], xCoords[i], 0.05*height);
-    }
-    else {
-      text(mins[i], xCoords[i], 0.95*height);
-      text(maxes[i], xCoords[i], 0.05*height);
-    }
-  }
-  
-  
-  for(int i = 0; i < dimensions.length; ++i) {
-    for(int j = 0; j < entries.length; ++j ) {
-      yCoords[i][j] = (0.1*height) + ((0.8*height)/(maxes[i] - mins[i]))*(data[i][j] - mins[i]);
-      invYs[i][j] = height - yCoords[i][j];
-    }
-  }
-  
-  /*for(int i = 0; i < yCoords.length; ++i) {
-    println(i);
-    for(int j = 0; j < yCoords[0].length; ++j) {
-      print(yCoords[i][j] + " ");
-    }
-    println();
-  }*/
-  
-  
-  for(int ent = 0; ent < entries.length; ++ent) {
-    /*if(highlighted[ent]) {
-      strokeWeight(4);
-    }
-    else {
-      strokeWeight(1);
-    }*/
-    float red = ((yCoords[coloredWith][ent])/height)*255;
-    float blue = 255 - red;
-    stroke(red, 0, blue);
-    for(int dimen = 0; dimen < dimensions.length - 1; ++dimen) {
-      if(!isInverted[dimen] && !isInverted[dimen + 1]){
-        line(xCoords[dimen], yCoords[dimen][ent], xCoords[dimen + 1], yCoords[dimen +1][ent]);
-      }  
-      else if (isInverted[dimen] && !isInverted[dimen + 1]){
-        line(xCoords[dimen], invYs[dimen][ent], xCoords[dimen + 1], yCoords[dimen +1][ent]);
+var graph = d3.csv("data10.csv", function(data) {
+  console.log(data);
+  var y =  {};
+  data.forEach(function(d) {
+    //console.log(d);
+      d.value = +d.value;
+      if(!(d.year in y)){
+        y[d.year] = true;
       }
-      else if (isInverted[dimen] && isInverted[dimen + 1]){
-        line(xCoords[dimen], invYs[dimen][ent], xCoords[dimen + 1], invYs[dimen +1][ent]);
-      }
-      else {
-        line(xCoords[dimen], yCoords[dimen][ent], xCoords[dimen + 1], invYs[dimen +1][ent]);
-      }
-    }
-  }
 
-  
-}
 
-void mousePressed() {
-  
-  for(int i = 0; i < xCoords.length; ++i) {
-    if( mouseY > 0.1*height && mouseY < 0.9*height && mouseX > (xCoords[i] - 0.5*rectWidth) && mouseX < (xCoords[i] + 0.5*rectWidth)) {
+  });
+  var ticks = Object.keys(y).length;
+
+
+  var x = d3.scale
+    .linear()
+    .domain(d3.extent(data, function(d) { return d.year; }))
+      .range([0, width]);
+
+  var y = d3.scale.linear()
+      .range([height-10, 0]);
+
+  var colorScale = d3.scale.ordinal()
+    .range(colors);
+
+  var xAxis = d3.svg.axis()
+      .scale(x)
+      .orient("bottom")
+      .ticks(ticks)
+      .tickFormat(d3.format("d"));
+
+  var yAxis = d3.svg.axis()
+      .scale(y);
+
+  var stack = d3.layout.stack()
+      .offset("silhouette")
+      .values(function(d) { return d.values; })
+      .x(function(d) { return d.year; })
+      .y(function(d) { return d.value; });
+
+  var nest = d3.nest()
+      .key(function(d) { return d.name; });
+
+  var area = d3.svg.area()
+      .interpolate("cardinal")
+      .x(function(d) { return x(d.year); })
+      .y0(function(d) { return y(d.y0); })
+      .y1(function(d) { return y(d.y0 + d.y); });
+
+  var svg = d3.select(".chart").append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  var layers = stack(nest.entries(data));
+
+  y.domain([0, d3.max(data, function(d) { return d.y0 + d.y; })]);
+
+  svg.selectAll(".layer")
+    .data(layers)
+    .enter().append("path")
+    .attr("class", "layer")
+    .attr("d", function(d) { return area(d.values); })
+    .style("fill", function(d, i) { return colorScale(i); });
+
+
+  svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis);
+
+  svg.append("g")
+    .attr("class", "y axis")
+    .call(yAxis.orient("left"));
+
+  svg.selectAll(".layer")
+    .attr("opacity", 1)
+    .on("mouseover", function(d, i) {
+        svg.selectAll(".layer").transition()
+      .attr("opacity", function(d, j) { return j != i ? 0.5 : 1;})
+    })
+
+    .on("mousemove", function(d) {
+      mousex = d3.mouse(this);
+      mousex = mousex[0];
+      var yr = d3.round(x.invert(mousex));
+      var selected = (d.values);
+      for (var i = 0; i < selected.length; i++) {
+        years[i] = selected[i].year;
+      }
+      val = selected[years.indexOf(yr + "")].value;
+      tooltip.html("Name: " + d.key + "<br>" + "Value: " + val + "<br>" +   "Year: " + yr).style("visibility", "visible");
       
-      isInverted[i] = !isInverted[i];
-    }
-    //rect(xCoords[i], 0.075*height, 0.01*width, 0.01*height);
-    if( (mouseX > (xCoords[i] - 0.01*width)) && (mouseX < (xCoords[i] + 0.01*width)) && (mouseY > (0.075*height - 0.03*height)) && (mouseY < (0.075*height + 0.03*height))){
-      coloredWith = i;
-    }
-  }
-  
-}
-</script>
+    })
 
+    .on("mouseout", function(d) {
+     svg.selectAll(".layer")
+      .transition()
+      .attr("opacity", "1");
+    tooltip.html("").style("visibility", "hidden");
+    })
 
-<script type="text/processing" data-processing-target="c">
-String[] names;
-int[] values;
-float[] centerX;
-float[] centerY;
-float[] labels;
-float origX, origY;
-float graphWidth, graphHeight;
-String xName, yName;
-int maxVal = 0;
-float barWidth;
-boolean bar = true;
-
-void setup() {
-  //surface.setResizable(true);
-  size(600, 500);
-  loadData();
-}
-
-void draw() {
-  background(200, 200, 200);
-  drawAxes();
-  if (bar) {
-    drawBar();
-  } else {
-    drawLine();
-  }
-  checkMouse();
-}
-
-void loadData() {
-  String[] lines = loadStrings("data.csv");
-  String[] firstLine = split(lines[0], ",");
-  xName = firstLine[0];
-  yName = firstLine[1];
-  names = new String[lines.length - 1];
-  values = new int[lines.length - 1];
-  centerX = new float[lines.length - 1];
-  centerY = new float[lines.length - 1];
-
-
-  for (int i = 1; i < lines.length; ++i) {
-    String[] row = split(lines[i], ",");
-    names[i-1] = row[0];
-    values[i -1] = (int)parseFloat(row[1]);
-    if (values[i-1] > maxVal) {
-      maxVal = values[i-1];
-    }
-  }
-
-  barWidth = (float) (width*0.9)/(names.length);
-
-  for (int i=0; i<values.length; i++) {
-    float h = (((float)values[i]/maxVal)*graphHeight);
-    centerX[i] = (i*barWidth + 0.1*width) + 0.5*barWidth;
-    centerY[i] = graphHeight-h;
-  }
-  
-  float increment = maxVal/10.0;
-  labels = new float[10];
-  for(int i = 0; i < labels.length; ++i) {
-    labels[i] = i*increment;
-  }
-  
-}
-
-void drawBar() {
-  fill(226, 229, 100);
-  barWidth = (float) (width*0.9)/(names.length);
-
-  for (int i=0; i<values.length; i++) {
-    float h = (((float)values[i]/maxVal)*graphHeight);
-    rect(i*barWidth + 0.1*width, graphHeight-h, barWidth, h);
-  }
-}
-
-void drawLine() {
-  fill(226, 229, 100);
-  barWidth = (float) (width*0.9)/(names.length);
-
-  for (int i=0; i<values.length; i++) {
-    float h = (((float)values[i]/maxVal)*graphHeight);
-    ellipse((i*barWidth + 0.1*width) + 0.5*barWidth, graphHeight-h, graphWidth*0.02, graphHeight*0.02);
-    centerX[i] = (i*barWidth + 0.1*width) + 0.5*barWidth;
-    centerY[i] = graphHeight-h;
-  }
-
-  for (int i=0; i<values.length - 1; i++) {
-    line(centerX[i], centerY[i], centerX[i + 1], centerY[i + 1]);
-  }
-}
-
-
-void drawAxes() {
-  origX = width*0.1;
-  origY = height*0.9;
-  graphWidth = width*0.9;
-  graphHeight = height*0.9;
-  barWidth = (float) (width*0.9)/(names.length);
-
-
-  line(origX, origY, width, origY);
-  line(origX, origY, origX, 0);
-
-  fill(0, 102, 153);
-  textSize(width*0.02);
-  text(xName, graphWidth*0.5, height*0.98); 
-
-  int x = (int)(graphWidth*0.02);
-  int y = (int)(graphHeight * 0.5); 
-  pushMatrix();
-  translate(x, y);
-  rotate(HALF_PI + PI);
-  text(yName, 0, 0);
-  popMatrix();
-
-  fill(255, 255, 255);
-  rect(width*0.9, 0, 0.1*width, height*0.05);
-
-  fill(0, 0, 0);
-  if (bar) {
-    text("Line", width*0.92, height*0.04);
-  } 
-  else {
-    text("Bar", width*0.92, height*0.04);
-  }
-
-  for (int i = 0; i < values.length; ++i) {
-    float h = (((float)values[i]/maxVal)*graphHeight);
-
-    centerX[i] = (i*barWidth + 0.1*width) + 0.5*barWidth;
-    centerY[i] = graphHeight-h;
-    line(centerX[i], origY, centerX[i], 0.92*height);
-
-    int x1 = (int)(centerX[i]);
-    int y1 = (int)(height * 0.98); 
-    pushMatrix();
-    translate(x1, y1);
-    rotate(HALF_PI + PI);
-    text(names[i], 0, 0);
-    popMatrix();
-  }
-
-  float increment = (graphHeight)/10;
-  for (int i = 0; i < 10; ++i) {
-    line(0.08*width, origY - (i*increment), origX, origY - (i*increment));
-    text(labels[i], 0.02*width, origY - (i*increment));
-  }  
-}
-
-void checkMouse() {
-  if (bar) {
-    if ((mouseX > origX) && (mouseY < origY)) {
-      int index = ((int)(mouseX/barWidth)) - 1;
-      float barHeight = graphHeight - ((float)values[index]/maxVal)*graphHeight;
-      if ((mouseY > barHeight) && (mouseY < origY) ) {
-        fill(255, 255, 255);
-        rect(mouseX, mouseY, graphWidth*0.1, graphHeight*0.1);
-        String label = "(" + names[index] + "," + values[index] + ")";
-        fill(0, 0, 0);
-        textSize(width*0.0125);
-        text(label, mouseX + graphWidth*0.02, mouseY + graphHeight*0.05);
-      }
-    }
-  } 
-  else {
-    if ((mouseX > origX) && (mouseY < origY)) {
-      int index = ((int)(mouseX/barWidth)) - 1;
-      if ((mouseX > (centerX[index] - graphWidth * 0.01)) && (mouseX < (centerX[index] + graphWidth * 0.01)) && (mouseY > (centerY[index] - graphHeight * 0.01)) && (mouseY < (centerY[index] + graphHeight * 0.01))) {        
-        fill(255, 255, 255);
-        rect(mouseX, mouseY, graphWidth*0.1, graphHeight*0.1);
-        String label = "(" + names[index] + "," + values[index] + ")";
-        fill(0, 0, 0);
-        textSize(width*0.0125);
-        text(label, mouseX + graphWidth*0.02, mouseY + graphHeight*0.05);
-      }
-    }
-  }
-}
-
-void mouseClicked() {
-  if ((mouseX > width*0.9) && (mouseY < height*0.05)) {
-    bar = !bar;
-  }
-}
+});
 
 </script>
-<canvas id="processing-canvas"> </canvas>
-<br>
-<canvas id="c"></canvas>
-<br>
-
-
-  
-  </body>
-</html>
